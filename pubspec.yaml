@@ -1,0 +1,46 @@
+name: uwu_chat
+description: A new Flutter project.
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.5 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  google_fonts: ^6.2.1
+  flutter_pw_validator: ^1.6.0
+  http: ^1.1.0
+  cached_network_image: ^3.3.0
+  jiffy: ^6.2.1
+  faker: ^2.1.0
+  get: ^4.6.6
+  google_sign_in: ^6.1.6
+  shared_preferences: ^2.2.2
+  jwt_decoder: ^2.0.1
+  image_picker: ^1.0.5
+  camera: ^0.10.5+7
+  emoji_picker_flutter: ^1.6.3
+  snippet_coder_utils: ^1.0.15
+  http_parser: ^4.0.2
+  mailer: ^6.0.1
+  socket_io_client: ^2.0.3+1
+  cupertino_icons: ^1.0.2
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^2.0.0
+
+flutter:
+
+  uses-material-design: true
+
+  assets:
+  - assets/
