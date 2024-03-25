@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import '../one_to_one_chat/home.dart';
 import 'package:http_parser/http_parser.dart'as http_parser;
+import 'package:uwu_chat/configurations/config.dart';
 
 class Profile extends StatefulWidget {
   const Profile({Key? key}) : super(key: key);
@@ -93,7 +94,7 @@ class _ProfileState extends State<Profile> {
       return;
     }
 
-    var apiUrl = Uri.parse('http://172.16.168.90:3000/updateProfilePicture');
+    var apiUrl = Uri.parse('$updatepp/');
     var imageFile = File(imagePath);
     late String contentType;
 
@@ -140,7 +141,7 @@ class _ProfileState extends State<Profile> {
 
 
   Future<void> saveImageUrlToDatabase(String imageUrl) async {
-    var saveUrlApi = Uri.parse('http://172.16.168.90:3000/updateProfilePicture');
+    var saveUrlApi = Uri.parse('$updatepp/');
     try {
       var response = await http.post(saveUrlApi, body: {'imageUrl': imageUrl});
 

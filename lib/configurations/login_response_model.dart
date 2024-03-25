@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'config.dart';
 
 LoginResponseModel loginResponseModel(String str) =>
     LoginResponseModel.fromJson(
@@ -34,7 +35,7 @@ class APIService{
   static var client = http.Client();
 
   static Future<LoginResponseModel> otpLogin(String email) async{
-    var url = Uri.parse('http://192.168.0.106:80/otp-login');
+    var url = Uri.parse('$otplogin/');
 
     var response = await client.post(
         url,
@@ -47,7 +48,7 @@ class APIService{
   }
 
   static Future<LoginResponseModel> verifyOTP(String email, String otpHash, String otpCode, int expires) async{
-    var url = Uri.parse('http://192.168.0.106:80/otp-verify');
+    var url = Uri.parse('$otpverify/');
 
 
     try {

@@ -46,7 +46,7 @@ class _ChatScreenState extends State<ChatScreenn> {
   @override
   void initState() {
     super.initState();
-    _socket = IO.io('http://172.16.168.90:3001',
+    _socket = IO.io('http://192.168.0.160:81',
         IO.OptionBuilder().setTransports(['websocket']).setQuery({'username': widget.username}).build());
     _connectSocket();
   }

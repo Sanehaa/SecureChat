@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http_parser/http_parser.dart'as http_parser;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uwu_chat/configurations/config.dart';
 
 class HelpandSupport extends StatefulWidget {
   const HelpandSupport({Key? key}) : super(key: key);
@@ -34,7 +35,7 @@ class _HelpandSupportState extends State<HelpandSupport> {
     try {
       String? userEmail = await getUserEmail();
 
-      final apiUrl = Uri.parse('http://172.16.168.90:3000/submit-issue');
+      final apiUrl = Uri.parse('$issuesubmit/');
       final request = http.MultipartRequest('POST', apiUrl);
 
       request.fields['description'] = description;

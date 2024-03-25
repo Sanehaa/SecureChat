@@ -116,7 +116,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Future<void> saveGoogleEmailToBackend(
       String googleToken, String email) async {
-    final Uri uri = Uri.parse('http://172.16.168.90:3000/google-login');
+    final Uri uri = Uri.parse('glogin/');
 
     final response = await http.post(
       uri,

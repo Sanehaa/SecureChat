@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:uwu_chat/features/one_to_one_chat/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uwu_chat/configurations/config.dart';
 
 
 class Journey extends StatefulWidget {
@@ -45,7 +46,7 @@ class _JourneyState extends State<Journey> {
   }
 
   Future<void> saveGoogleEmailToBackend(String googleToken, String email) async {
-    final Uri uri = Uri.parse('http://172.16.168.90:3000/google-login');
+    final Uri uri = Uri.parse('$glogin/');
 
     final response = await http.post(
       uri,

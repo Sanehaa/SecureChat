@@ -13,6 +13,7 @@ class NotificationScreen extends StatefulWidget {
 
 class _NotificationScreenState extends State<NotificationScreen> {
   List<Map<String, dynamic>> friendRequests = [];
+  static const String baseUrl = 'http://192.168.0.106:81/';
 
   @override
   void initState() {
@@ -34,7 +35,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       }
 
       final response = await http.get(
-        Uri.parse('http://172.16.168.90:3000/friend-requests/pending/$userEmail'),
+        Uri.parse('$baseUrl/friend-requests/pending/$userEmail'),
       );
 
       if (response.statusCode == 200) {
@@ -59,7 +60,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       }
 
       final response = await http.put(
-        Uri.parse('http://172.16.168.90:3000/friend-requests/accept/$userEmail/$senderEmail'),
+        Uri.parse('$baseUrl/friend-requests/accept/$userEmail/$senderEmail'),
       );
 
       if (response.statusCode == 200) {
@@ -82,7 +83,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       }
 
       final response = await http.put(
-        Uri.parse('http://172.16.168.90:3000/friend-requests/decline/$userEmail/$senderEmail'),
+        Uri.parse('$baseUrl/friend-requests/decline/$userEmail/$senderEmail'),
       );
 
       if (response.statusCode == 200) {
