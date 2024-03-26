@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserService {
-  static const String baseUrl = 'http://192.168.0.106:81/';
+  static const String baseUrl = 'http://172.16.179.99:3001/';
 
   // method to search for users by email
   static Future<List<String>> searchUsers(String query) async {

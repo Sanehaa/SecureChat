@@ -1,8 +1,11 @@
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:uwu_chat/constants/theme_constants.dart';
 import 'package:uwu_chat/features/one_to_one_chat/message.dart';
+import 'package:uwu_chat/features/tab/camera_layout.dart';
 import '../../constants/icons.dart';
 
 
@@ -16,6 +19,7 @@ class ChatScreenn extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreenn> {
   late IO.Socket _socket;
+  ImagePicker _picker = ImagePicker();
   final TextEditingController textEditingController = TextEditingController();
   static _ChatScreenState? of(BuildContext context) =>
       context.findAncestorStateOfType<_ChatScreenState>();
@@ -46,7 +50,7 @@ class _ChatScreenState extends State<ChatScreenn> {
   @override
   void initState() {
     super.initState();
-    _socket = IO.io('http://192.168.0.160:81',
+    _socket = IO.io('http://172.16.179.99:3001',
         IO.OptionBuilder().setTransports(['websocket']).setQuery({'username': widget.username}).build());
     _connectSocket();
   }
@@ -159,7 +163,7 @@ class ReceiversMsg extends StatelessWidget {
   final String message;
   final String messageDate;
 
-  static const _borderRadius = 26.0;
+  static const _borderRadius = 20.0;
 
   @override
   Widget build(BuildContext context) {
@@ -173,7 +177,7 @@ class ReceiversMsg extends StatelessWidget {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
+                color: AppColors.textLight,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(_borderRadius),
                   topRight: Radius.circular(_borderRadius),
@@ -214,7 +218,7 @@ class _SendersMsg extends StatelessWidget {
   final String message;
   final String messageDate;
 
-  static const _borderRadius = 26.0;
+  static const _borderRadius = 20.0;
 
   @override
   Widget build(BuildContext context) {
@@ -278,7 +282,8 @@ class _ActionBarState extends State<_ActionBar> {
   late TextEditingController textEditingController;
   late FocusNode textFocusNode;
   late _ChatScreenState? chatScreenState;
-
+  ImagePicker _picker = ImagePicker();
+  late XFile file;
 
   _sendMessage() {
     String message = textEditingController.text.trim();
@@ -357,7 +362,7 @@ class _ActionBarState extends State<_ActionBar> {
                       showModalBottomSheet(
                           backgroundColor: Colors.transparent,
                           context: context,
-                          builder: (builder)=>bottomSheet()
+                          builder: (builder)=>bottomSheet(context)
                       );
                     },
                     child: const Padding(
@@ -454,35 +459,42 @@ class _ActionBarState extends State<_ActionBar> {
     );
   }
 
-  Widget bottomSheet(){
+  Widget bottomSheet(BuildContext context){
     return Container(
       height: 278,
       width: MediaQuery.of(context).size.width,
       child: Card(
         margin: const EdgeInsets.all(18),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 15),
           child: Column(
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  iconCreation(Icons.insert_drive_file, AppColors.secondary, "Document"),
-                  const SizedBox(width: 40),
-                  iconCreation(Icons.camera_alt, AppColors.secondary, "Camera"),
-                  const SizedBox(width: 40),
-                  iconCreation(Icons.insert_photo, AppColors.secondary, "Gallery"),
+                  iconCreation(Icons.insert_drive_file, AppColors.secondary, "Document", () {}),
+                  const SizedBox(width: 30),
+                  iconCreation(Icons.camera_alt, AppColors.secondary, "Camera", () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => CameraLayout()),
+                    );
+                  }),
+                  const SizedBox(width: 30),
+                  iconCreation(Icons.insert_photo, AppColors.secondary, "Gallery", () async {
+                    file = (await _picker.pickImage(source: ImageSource.gallery))!;
+                  }),
                 ],
               ),
-              const SizedBox(height: 30,),
+              const SizedBox(height: 12,),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  iconCreation(Icons.headset, AppColors.secondary, "Audio"),
-                  const SizedBox(width: 40),
-                  iconCreation(Icons.location_pin, AppColors.secondary, "Location"),
-                  const SizedBox(width: 40),
-                  iconCreation(Icons.person, AppColors.secondary, "Contact"),
+                  iconCreation(Icons.headset, AppColors.secondary, "Audio", () {}),
+                  const SizedBox(width: 30),
+                  iconCreation(Icons.location_pin, AppColors.secondary, "Location", () {}),
+                  const SizedBox(width: 30),
+                  iconCreation(Icons.person, AppColors.secondary, "Contact", () {}),
                 ],
               )
             ],
@@ -492,12 +504,12 @@ class _ActionBarState extends State<_ActionBar> {
     );
   }
 
-  Widget iconCreation(IconData icon, Color color, String text){
-    return InkWell(
-      onTap: () {},
-      child: Column(
-        children: [
-          CircleAvatar(
+
+  Widget iconCreation(IconData icon, Color color, String text, Function()? onTap) {
+    return Column(
+      children: [
+        IconButton(
+          icon: CircleAvatar(
             radius: 30,
             backgroundColor: color,
             child: Icon(
@@ -506,10 +518,11 @@ class _ActionBarState extends State<_ActionBar> {
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 5),
-          Text(text, style: const TextStyle(fontSize: 12),)
-        ],
-      ),
+          onPressed: onTap,
+        ),
+        const SizedBox(height: 1),
+        Text(text, style: const TextStyle(fontSize: 12)),
+      ],
     );
   }
 
