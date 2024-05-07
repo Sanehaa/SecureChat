@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:uwu_chat/features/forgot_password/forgot_password.dart';
 import 'package:uwu_chat/features/one_to_one_chat/home.dart';
 import 'package:uwu_chat/features/start_screens/journey.dart';
 import 'package:uwu_chat/features/auth/signup.dart';
@@ -9,7 +10,6 @@ import 'package:uwu_chat/configurations/config.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,7 +23,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
+  Color customColor1 = const Color(0xff0F2630);
+  Color customColor2 = const Color(0xff0F2630);
+  Color customColor3 = const Color(0xFF088395);
   late SharedPreferences prefs;
 
   @override
@@ -47,11 +49,11 @@ class _LoginScreenState extends State<LoginScreen> {
           "password": _passwordController.text
         };
 
-        var response = await http.post(Uri.parse('$login/'),
+        var response = await http.post(Uri.parse('$login'),
             headers: {"Content-Type": "application/json"},
             body: jsonEncode(reqBody));
 
-        print("Request URL: $login/");
+        print("Request URL: $login");
         print("Request Body: $reqBody");
         print("Response Status Code: ${response.statusCode}");
         print("Response Body: ${response.body}");
@@ -62,8 +64,12 @@ class _LoginScreenState extends State<LoginScreen> {
           if (jsonResponse.containsKey('status')) {
             if (jsonResponse['status']) {
               var myToken = jsonResponse['token'];
+              var userId = jsonResponse['userId'];
+              print('User ID from login: $userId');
               prefs.setString('token', myToken);
               prefs.setString('userEmail', _emailController.text);
+              prefs.setString('userId', userId);
+
               Navigator.of(context).push(MaterialPageRoute(
                   builder: (context) => HomeScreen(token: myToken)));
             } else {
@@ -105,7 +111,6 @@ class _LoginScreenState extends State<LoginScreen> {
     return prefs.getString('userEmail');
   }
 
-
   googleLogin() async {
     print("googleLogin method Called");
     GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
@@ -121,9 +126,10 @@ class _LoginScreenState extends State<LoginScreen> {
         print("Google Email: $googleEmail");
         await saveGoogleEmailToBackend(googleToken!, googleEmail);
         Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => HomeScreen()),);}
-       else {
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+        );
+      } else {
         print("Google sign-in cancelled or failed");
       }
     } catch (error) {
@@ -131,7 +137,8 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> saveGoogleEmailToBackend(String googleToken, String email) async {
+  Future<void> saveGoogleEmailToBackend(
+      String googleToken, String email) async {
     final Uri uri = Uri.parse('$glogin/');
 
     final response = await http.post(
@@ -148,9 +155,6 @@ class _LoginScreenState extends State<LoginScreen> {
       print('Failed to save Google email. Status code: ${response.statusCode}');
     }
   }
-  Color customColor1 = const Color(0xff0F2630);
-  Color customColor2 = const Color(0xff0F2630);
-  Color customColor3 = const Color(0xFF088395);
 
   void navigate() {
     Navigator.of(context).push(
@@ -168,8 +172,11 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-   @override
+  @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final containerWidth = screenSize.width * 1;
+    final containerHeight = screenSize.height * 1;
     return Scaffold(
       key: _scaffoldKey,
       body: Stack(
@@ -187,8 +194,8 @@ class _LoginScreenState extends State<LoginScreen> {
           Positioned(
             top: 198,
             child: Container(
-              width: 387,
-              height: 610,
+              width: containerWidth,
+              height: containerHeight,
               decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.only(
@@ -280,13 +287,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      'Forgot password?',
-                      style: GoogleFonts.poppins(
-                          textStyle: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.blueGrey,
-                      )),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ForgotPassword(),
+                          ),
+                        );
+                      },
+                      child: Text('Forgot password?',
+                          style: GoogleFonts.poppins(
+                              color: Colors.blueGrey, fontSize: 15)),
                     ),
                     const SizedBox(
                       height: 40.0,
@@ -299,7 +311,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 16.0),
-
 
                     //google, apple , fb signin
                     Row(
@@ -330,8 +341,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
-
-
                   ],
                 ),
               ),

@@ -56,15 +56,17 @@ class _SignupScreenState extends State<SignupScreen> {
             Uri.parse('$registration/'),
             headers: {"Content-Type": "application/json"},
             body: jsonEncode(regBody));
+        print('Response Body: ${response.body}');
         if (response.statusCode == 200) {
           var jsonResponse = jsonDecode(response.body);
+          print('JSON Response: $jsonResponse');
           var userId = jsonResponse['userId'];
           print('User ID from registration: $userId');
 
-          // Save the userId to shared preferences
           SharedPreferences prefs = await SharedPreferences.getInstance();
           prefs.setString('userId', userId);
           prefs.setString('username', _username.text);
+          prefs.setString('email', _emailController.text);
 
           return true;
         } else {
@@ -74,7 +76,7 @@ class _SignupScreenState extends State<SignupScreen> {
         }
       } catch (e) {
         print("Error during registration: $e");
-        return false; // Registration failed due to an error
+        return false;
       }
     } else {
       return false; // Email or password is empty
@@ -128,6 +130,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
     if (response.statusCode == 200) {
       var jsonResponse = jsonDecode(response.body);
+      print('JSON Response: $jsonResponse');
       var userId = jsonResponse['userId'];
       SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setString('userId', userId);
@@ -356,31 +359,27 @@ class _SignupScreenState extends State<SignupScreen> {
 
                                       LoginResponseModel response;
                                       try {
-                                        response = await APIService.otpLogin(
-                                            _emailController.text);
+                                        response = await APIService.otpLogin(_emailController.text);
                                         setState(() {
                                           isApiCallProcess = false;
                                         });
 
                                         if (response.data != null) {
-                                          // Extract email from the controller
                                           String email = _emailController.text;
-                                          final BuildContext currentContext =
-                                              context;
+                                          final BuildContext currentContext = context;
                                           Navigator.pushAndRemoveUntil(
                                             currentContext,
                                             MaterialPageRoute(
                                               builder: (context) =>
                                                   EmailVerification(
-                                                otpHash: response.data!,
-                                                email: email ?? '',
-                                              ),
+                                                    otpHash: response.data!,
+                                                    email: email ?? '',
+                                                  ),
                                             ),
-                                            (route) => false,
+                                                (route) => false,
                                           );
                                         } else {
-                                          print(
-                                              "OTP Login failed: ${response.message}");
+                                          print("OTP Login failed: ${response.message}");
                                         }
                                       } catch (e) {
                                         print("Error during OTP login: $e");
@@ -389,6 +388,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                         });
                                         return;
                                       }
+
 
                                       await _saveUsername();
                                       bool registrationSuccess =

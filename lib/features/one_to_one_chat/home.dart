@@ -1,20 +1,23 @@
 import 'package:faker/faker.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uwu_chat/common_widgets/random_img_api.dart';
 import 'package:uwu_chat/features/friend_req/searchuser.dart';
 import 'package:uwu_chat/features/settings/settings.dart';
 import 'package:uwu_chat/constants/story_data.dart';
 import 'package:uwu_chat/constants/theme_constants.dart';
+import 'package:uwu_chat/features/start_screens/screen_2.dart';
 import '../../constants/avatar.dart';
 import 'chatscreen.dart';
 import '../settings/edit_profile.dart';
-import '../start_screens/journey.dart';
 import '../notifications/notifications.dart';
 import '../../configurations/userservice.dart';
+import 'package:http/http.dart' as http;
+import 'package:uwu_chat/configurations/config.dart';
 
 class HomeScreen extends StatelessWidget {
-  HomeScreen({@required this.token, super.key});
-
+  HomeScreen({@required this.token, @required this.logout, super.key});
+  final Function(BuildContext)? logout;
   final String? token;
   final ValueNotifier<int> pageIndex = ValueNotifier(0);
 
@@ -37,6 +40,40 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _logout(BuildContext context) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://192.168.0.107:3000/logout'),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Logging out')),
+        );
+        print('Logging out');
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.remove('token');
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => Screen2()),
+              (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error logging out')),
+        );
+        print('Error logging out');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => Screen2()),
+        );
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error logging out')),
+      );
+      print('Error logging out: $error');
+    }
+  }
   void _onNavigationIconSelected(index) {
     title.value = screenTitles[index];
     pageIndex.value = index;
@@ -101,12 +138,8 @@ class HomeScreen extends StatelessWidget {
                       leading: Icon(Icons.exit_to_app),
                       title: Text('Logout'),
                       onTap: () {
-                        Navigator.of(context).pop(); // Close the dropdown
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const Journey(),
-                          ),
-                        );
+                          _logout(context);
+
                       },
                     ),
                   ),

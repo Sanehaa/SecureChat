@@ -44,8 +44,13 @@ class APIService{
           "email": email
         })
     );
-    return loginResponseModel(response.body);
+    if (response.statusCode == 200) {
+      return loginResponseModel(response.body);
+    } else {
+      throw Exception('Failed to load data, status code: ${response.statusCode}');
+    }
   }
+
 
   static Future<LoginResponseModel> verifyOTP(String email, String otpHash, String otpCode, int expires) async{
     var url = Uri.parse('$otpverify/');

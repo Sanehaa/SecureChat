@@ -13,7 +13,7 @@ class NotificationScreen extends StatefulWidget {
 
 class _NotificationScreenState extends State<NotificationScreen> {
   List<Map<String, dynamic>> friendRequests = [];
-  static const String baseUrl = 'http://192.168.0.106:81/';
+  static const String baseUrl = 'http://192.168.0.107:3000';
 
   @override
   void initState() {

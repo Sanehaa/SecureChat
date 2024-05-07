@@ -1,13 +1,34 @@
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:uwu_chat/constants/theme_constants.dart';
 import 'package:uwu_chat/features/one_to_one_chat/message.dart';
 import 'package:uwu_chat/features/tab/camera_layout.dart';
+import 'package:screen_capture_event/screen_capture_event.dart';
 import '../../constants/icons.dart';
+import 'package:uwu_chat/configurations/config.dart';
+import 'package:http/http.dart' as http;
 
+
+Future<String?> getFCMToken(String userId) async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? userId = prefs.getString('userId');
+  var url = Uri.parse('$getfcm');
+  var response = await http.post(url, body: {'userId': userId});
+
+  if (response.statusCode == 200) {
+    var data = json.decode(response.body);
+    var fcmToken = data['fcmToken'];
+    print('FCM token retrieved successfully: $fcmToken');
+    return fcmToken;
+  } else {
+    print('Failed to get FCM token: ${response.body}');
+    return null;
+  }
+}
 
 class ChatScreenn extends StatefulWidget {
   final String username;
@@ -18,8 +39,9 @@ class ChatScreenn extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreenn> {
+  final ScreenCaptureEvent screenListener = ScreenCaptureEvent();
   late IO.Socket _socket;
-  ImagePicker _picker = ImagePicker();
+  //final ImagePicker _picker = ImagePicker();
   final TextEditingController textEditingController = TextEditingController();
   static _ChatScreenState? of(BuildContext context) =>
       context.findAncestorStateOfType<_ChatScreenState>();
@@ -50,15 +72,24 @@ class _ChatScreenState extends State<ChatScreenn> {
   @override
   void initState() {
     super.initState();
-    _socket = IO.io('http://172.16.179.99:3001',
+    _socket = IO.io('http://192.168.0.107:3000',
         IO.OptionBuilder().setTransports(['websocket']).setQuery({'username': widget.username}).build());
     _connectSocket();
+    screenListener.addScreenShotListener((filePath) {
+      _sendScreenshotNotification(filePath);
+    });
+    screenListener.watch();
   }
 
   @override
   void dispose() {
     textEditingController.dispose();
+    screenListener.dispose();
     super.dispose();
+  }
+
+  _sendScreenshotNotification(String filePath) {
+    print("Screenshot stored on: $filePath");
   }
 
   @override
@@ -79,10 +110,10 @@ class _ChatScreenState extends State<ChatScreenn> {
             },
           ),
         ),
-        title: Text(widget.username, style:TextStyle(color: Colors.black, fontSize: 15)),
+        title: Text(widget.username, style:const TextStyle(color: Colors.black, fontSize: 15)),
         actions: [
           Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Center(
                 child: IconBorder(
                   icon: Icons.video_call,
@@ -90,7 +121,7 @@ class _ChatScreenState extends State<ChatScreenn> {
                 ),
               )
           ),
-          Padding(padding: EdgeInsets.only(right: 20),
+          Padding(padding: const EdgeInsets.only(right: 20),
             child: Center(
               child: IconBorder(
                 icon: Icons.phone,
@@ -107,7 +138,7 @@ class _ChatScreenState extends State<ChatScreenn> {
               username: widget.username, // Pass the username
             ),
           ),
-          _ActionBar(),
+          const _ActionBar(),
         ],
       ),
     );
@@ -116,7 +147,7 @@ class _ChatScreenState extends State<ChatScreenn> {
 
 class _DemoMessageList extends StatelessWidget {
   final List<Message> messagesList;
-  final String username; // Add the username parameter
+  final String username; 
 
   const _DemoMessageList({
     Key? key,
@@ -133,7 +164,7 @@ class _DemoMessageList extends StatelessWidget {
         itemBuilder: (context, index) {
           Message message = messagesList[index];
 
-          bool isSentMessage = message.senderUsername == username; // Use the passed username
+          bool isSentMessage = message.senderUsername == username; 
 
           if (isSentMessage) {
             return _SendersMsg(
@@ -167,41 +198,67 @@ class ReceiversMsg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.textLight,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(_borderRadius),
-                  topRight: Radius.circular(_borderRadius),
-                  bottomRight: Radius.circular(_borderRadius),
+    return GestureDetector(
+      onLongPress: () {
+        showModalBottomSheet(
+          context: context,
+          builder: (BuildContext context) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                ListTile(
+                  leading: Icon(Icons.copy),
+                  title: Text('Copy'),
+                  onTap: () {
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.forward),
+                  title: Text('Forward'),
+                  onTap: () {
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                decoration: const BoxDecoration(
+                  color: AppColors.textLight,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(_borderRadius),
+                    topRight: Radius.circular(_borderRadius),
+                    bottomRight: Radius.circular(_borderRadius),
+                  ),
+                ),
+                child: Padding(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 20),
+                  child: Text(message),
                 ),
               ),
-              child: Padding(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 12.0, vertical: 20),
-                child: Text(message),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Text(
-                messageDate,
-                style: const TextStyle(
-                  color: AppColors.textFaded,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  messageDate,
+                  style: const TextStyle(
+                    color: AppColors.textFaded,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            )
-          ],
+              )
+            ],
+          ),
         ),
       ),
     );
@@ -222,44 +279,70 @@ class _SendersMsg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                color: AppColors.secondary,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(_borderRadius),
-                  bottomRight: Radius.circular(_borderRadius),
-                  bottomLeft: Radius.circular(_borderRadius),
+    return GestureDetector(
+      onLongPress: () {
+        showModalBottomSheet(
+          context: context,
+          builder: (BuildContext context) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                ListTile(
+                  leading: Icon(Icons.copy),
+                  title: Text('Copy'),
+                  onTap: () {
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.forward),
+                  title: Text('Forward'),
+                  onTap: () {
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                decoration: const BoxDecoration(
+                  color: AppColors.secondary,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(_borderRadius),
+                    bottomRight: Radius.circular(_borderRadius),
+                    bottomLeft: Radius.circular(_borderRadius),
+                  ),
+                ),
+                child: Padding(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 20),
+                  child: Text(message,
+                      style: const TextStyle(
+                        color: AppColors.textLight,
+                      )),
                 ),
               ),
-              child: Padding(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 12.0, vertical: 20),
-                child: Text(message,
-                    style: const TextStyle(
-                      color: AppColors.textLight,
-                    )),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Text(
-                messageDate,
-                style: const TextStyle(
-                  color: AppColors.textFaded,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  messageDate,
+                  style: const TextStyle(
+                    color: AppColors.textFaded,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            )
-          ],
+              )
+            ],
+          ),
         ),
       ),
     );
@@ -269,7 +352,7 @@ class _SendersMsg extends StatelessWidget {
 
 
 class _ActionBar extends StatefulWidget {
-  _ActionBar({Key? key}) : super(key: key);
+  const _ActionBar({Key? key}) : super(key: key);
 
 
   @override
@@ -282,7 +365,7 @@ class _ActionBarState extends State<_ActionBar> {
   late TextEditingController textEditingController;
   late FocusNode textFocusNode;
   late _ChatScreenState? chatScreenState;
-  ImagePicker _picker = ImagePicker();
+  final ImagePicker _picker = ImagePicker();
   late XFile file;
 
   _sendMessage() {
@@ -371,15 +454,13 @@ class _ActionBarState extends State<_ActionBar> {
                     ),
                   ),
                 ),
-                Container(
-                  child: InkWell(
-                    onTap: () {
-                      // _openCamera();
-                    },
-                    child: const Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                      child: Icon(Icons.camera_alt),
-                    ),
+                InkWell(
+                  onTap: () {
+                    // _openCamera();
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6.0),
+                    child: Icon(Icons.camera_alt),
                   ),
                 ),
                 Expanded(
@@ -460,7 +541,7 @@ class _ActionBarState extends State<_ActionBar> {
   }
 
   Widget bottomSheet(BuildContext context){
-    return Container(
+    return SizedBox(
       height: 278,
       width: MediaQuery.of(context).size.width,
       child: Card(
@@ -477,7 +558,7 @@ class _ActionBarState extends State<_ActionBar> {
                   iconCreation(Icons.camera_alt, AppColors.secondary, "Camera", () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => CameraLayout()),
+                      MaterialPageRoute(builder: (context) => const CameraLayout()),
                     );
                   }),
                   const SizedBox(width: 30),

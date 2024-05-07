@@ -21,8 +21,17 @@ class _CameraLayoutState extends State<CameraLayout> {
   @override
   void initState() {
     super.initState();
-    _cameraController = CameraController(cameras[0], ResolutionPreset.high);
-    cameraValue = _cameraController.initialize();
+    initializeCamera().then((_) {
+      _cameraController = CameraController(cameras[0], ResolutionPreset.high);
+      cameraValue = _cameraController.initialize().then((_) {
+        setState(() {}); // Trigger rebuild after camera initialization
+      });
+    });
+  }
+
+  Future<void> initializeCamera() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    cameras = await availableCameras();
   }
 
   @override
@@ -101,5 +110,4 @@ class _CameraLayoutState extends State<CameraLayout> {
     //await _cameraController.takePicture(path!);
     Navigator.push(context, MaterialPageRoute(builder: (builder) => CameraView()));
   }
-
 }
