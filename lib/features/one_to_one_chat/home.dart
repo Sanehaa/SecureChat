@@ -225,17 +225,24 @@ class HomeScreen extends StatelessWidget {
                                   ),
                                 ),
                                 title: Text('$senderEmail'),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          ChatScreenn(
-                                            username: senderEmail,
-                                          ),
-                                    ),
-                                  );
+                                onTap: () async {
+                                  String? userId = await SharedPreferences.getInstance().then((prefs) => prefs.getString('userId'));
+                                  if (userId != null) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ChatScreenn(
+                                              username: senderEmail,
+                                              userId: userId,
+                                            ),
+                                      ),
+                                    );
+                                  } else {
+                                    print('User ID not found in SharedPreferences');
+                                  }
                                 }
+
 
                             ),
                               const Divider(

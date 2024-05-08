@@ -1,5 +1,6 @@
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -12,17 +13,23 @@ import '../../constants/icons.dart';
 import 'package:uwu_chat/configurations/config.dart';
 import 'package:http/http.dart' as http;
 
-
 Future<String?> getFCMToken(String userId) async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  String? userId = prefs.getString('userId');
+  print('User ID being sent in getFCMToken: $userId');
   var url = Uri.parse('$getfcm');
-  var response = await http.post(url, body: {'userId': userId});
+  var response = await http.post(
+    url,
+    headers: <String, String>{
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({'userId': userId}),
+  );
 
   if (response.statusCode == 200) {
     var data = json.decode(response.body);
     var fcmToken = data['fcmToken'];
     print('FCM token retrieved successfully: $fcmToken');
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString('fcmToken', fcmToken);
     return fcmToken;
   } else {
     print('Failed to get FCM token: ${response.body}');
@@ -30,24 +37,122 @@ Future<String?> getFCMToken(String userId) async {
   }
 }
 
+Future<void> sendScreenshotNotification(String receiverFcmToken) async {
+  print('To send the screenshot the fcmtoken of the receiver is: $receiverFcmToken');
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final sender = prefs.getString('userEmail');
+    if (sender == null) {
+      print('Sender email not found in SharedPreferences');
+      return;
+    }
+
+    var url = Uri.parse('http://192.168.0.107:3000/sendScreenshotNotification');
+    var response = await http.post(
+      url,
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'sender': sender,
+        'receiverFcmToken': receiverFcmToken,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('Screenshot notification sent successfully');
+    } else {
+      print('Error sending screenshot notification: ${response.body}');
+    }
+  } catch (error) {
+    print('Error sending screenshot notification: $error');
+  }
+}
+
+
+Future<void> sendCopyNotification(String receiverFcmToken,String copiedText) async {
+  print('copy button: $receiverFcmToken and $copiedText');
+
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final sender = prefs.getString('userEmail');
+    print('send is $sender');
+    if (sender == null) {
+      print('Sender email not found in SharedPreferences');
+      return;
+    }
+
+    final url = Uri.parse('http://192.168.0.107:3000/sendCopyNotification');
+    final response = await http.post(
+      url,
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'sender': sender,
+        'receiverFcmToken': receiverFcmToken,
+        'copiedText': copiedText,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('Copy notification sent successfully');
+    } else {
+      print('Error sending copy notification: ${response.body}');
+    }
+  } catch (error) {
+    print('Error sending copy notification: $error');
+  }
+}
+
+
 class ChatScreenn extends StatefulWidget {
   final String username;
-  const ChatScreenn({Key? key, required this.username}) : super(key: key);
+  final String userId;
+  const ChatScreenn({Key? key, required this.username, required this.userId}) : super(key: key);
 
   @override
   State<ChatScreenn> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreenn> {
+  bool _isScreenshotted = false;
+
+  void _sendScreenshottedMessage() {
+    _socket.emit('screenshotted', {
+      'message': 'This chat has been screenshotted',
+      'sender': widget.username,
+    });
+
+    _socket.emit('screenshotted', {
+      'message': 'This chat has been screenshotted',
+      'sender': widget.username,
+    });
+  }
+
+  String? fcmToken;
   final ScreenCaptureEvent screenListener = ScreenCaptureEvent();
   late IO.Socket _socket;
-  //final ImagePicker _picker = ImagePicker();
   final TextEditingController textEditingController = TextEditingController();
   static _ChatScreenState? of(BuildContext context) =>
       context.findAncestorStateOfType<_ChatScreenState>();
 
   List<Message> messagesList = [];
+  late String userId;
+  late String otherUserId = '';
 
+  Future<void> _getUserIdFromSharedPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedUserId = prefs.getString('userId');
+    if (storedUserId != null) {
+      setState(() {
+        userId = storedUserId;
+      });
+      print('User ID from SharedPreferences: $storedUserId');
+    } else {
+      print('User ID not available');
+    }
+  }
 
   _sendMessage(String message) {
     _socket.emit('message', {
@@ -55,30 +160,87 @@ class _ChatScreenState extends State<ChatScreenn> {
       'sender': widget.username,
     });
   }
-
-  _connectSocket() {
-    _socket.onConnect((data) => print('Connection established'));
+  void _connectSocket() {
+    _socket.onConnect((data) {
+      print('Connection established');
+    });
     _socket.onConnectError((data) => print('Connect Error: $data'));
     _socket.onDisconnect((data) => print('Socket.IO server disconnected'));
     _socket.on('message', (data) {
       Message message = Message.fromJson(data);
       setState(() {
         messagesList.add(message);
+        _isScreenshotted = false;
       });
     });
 
+    _socket.on('screenshotted', (data) {
+      setState(() {
+        _isScreenshotted = true;
+      });
+    });
   }
+
 
   @override
   void initState() {
     super.initState();
-    _socket = IO.io('http://192.168.0.107:3000',
-        IO.OptionBuilder().setTransports(['websocket']).setQuery({'username': widget.username}).build());
-    _connectSocket();
-    screenListener.addScreenShotListener((filePath) {
-      _sendScreenshotNotification(filePath);
+    _getUserIdFromSharedPrefs().then((_) {
+      _socket = IO.io(
+        'http://192.168.0.107:3000',
+        IO.OptionBuilder()
+            .setTransports(['websocket'])
+            .setQuery({'username': widget.username, 'userId': userId})
+            .build(),
+      );
+      print('Socket connection established with userId: $userId');
+      _connectSocket();
+      screenListener.addScreenShotListener((filePath) {
+        _sendScreenshotNotification(filePath);
+      });
+      screenListener.watch();
+
+      _getOtherUserId(widget.username);
+      print(widget.username);
+      _getOtherUserId(widget.username).then((_) async {
+        getFCMToken(otherUserId).then((token) {
+          setState(() {
+            fcmToken = token;
+          });
+          print('Retrieved FCM Token: $token');
+          sendScreenshotNotification(token!);
+        });
+      });
+
     });
-    screenListener.watch();
+  }
+
+  Future<void> _getOtherUserId(String username) async {
+    try {
+      var url = Uri.parse('http://192.168.0.107:3000/user/id');
+      var requestBody = json.encode({'email': widget.username});
+      print('Request body: $requestBody');
+      var response = await http.post(
+        url,
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+        },
+        body: requestBody,
+      );
+      if (response.statusCode == 200) {
+        var data = json.decode(response.body);
+        if (data.containsKey('userId')) {
+          otherUserId = data['userId'];
+          print('Other user\'s userId: $otherUserId');
+        } else {
+          print('User ID not found in response data');
+        }
+      } else {
+        print('Failed to get other user\'s userId: ${response.body}');
+      }
+    } catch (error) {
+      print('Error getting other user\'s userId: $error');
+    }
   }
 
   @override
@@ -90,7 +252,19 @@ class _ChatScreenState extends State<ChatScreenn> {
 
   _sendScreenshotNotification(String filePath) {
     print("Screenshot stored on: $filePath");
+    sendScreenshotNotification(fcmToken!);
+    _sendScreenshottedMessage();
+
+    setState(() {
+      _isScreenshotted = true;
+    });
+
+    _socket.emit('screenshotted', {
+      'message': 'This chat has been screenshotted',
+      'sender': widget.username,
+    });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +284,8 @@ class _ChatScreenState extends State<ChatScreenn> {
             },
           ),
         ),
-        title: Text(widget.username, style:const TextStyle(color: Colors.black, fontSize: 15)),
+        title: Text(widget.username, style:const TextStyle(color: Colors.black,
+            fontSize: 15)),
         actions: [
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -136,9 +311,23 @@ class _ChatScreenState extends State<ChatScreenn> {
             child: _DemoMessageList(
               messagesList: messagesList,
               username: widget.username, // Pass the username
+              isScreenshotted: _isScreenshotted,
             ),
           ),
           const _ActionBar(),
+          if (_isScreenshotted)
+            Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.all(8),
+              color: Colors.red,
+              child: Text(
+                'This chat has been screenshotted',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -147,12 +336,14 @@ class _ChatScreenState extends State<ChatScreenn> {
 
 class _DemoMessageList extends StatelessWidget {
   final List<Message> messagesList;
-  final String username; 
-
+  final String username;
+  final bool isScreenshotted;
   const _DemoMessageList({
     Key? key,
     required this.messagesList,
     required this.username,
+    required this.isScreenshotted
+
   }) : super(key: key);
 
   @override
@@ -164,17 +355,19 @@ class _DemoMessageList extends StatelessWidget {
         itemBuilder: (context, index) {
           Message message = messagesList[index];
 
-          bool isSentMessage = message.senderUsername == username; 
+          bool isSentMessage = message.senderUsername == username;
 
           if (isSentMessage) {
             return _SendersMsg(
               message: message.message,
               messageDate: message.sentAt.toString(),
+              isScreenshotted: isScreenshotted,
             );
           } else {
             return ReceiversMsg(
               message: message.message,
               messageDate: message.sentAt.toString(),
+              isScreenshotted: isScreenshotted,
             );
           }
         },
@@ -189,10 +382,12 @@ class ReceiversMsg extends StatelessWidget {
     Key? key,
     required this.message,
     required this.messageDate,
+    required this.isScreenshotted,
   }) : super(key: key);
 
   final String message;
   final String messageDate;
+  final bool isScreenshotted;
 
   static const _borderRadius = 20.0;
 
@@ -209,7 +404,18 @@ class ReceiversMsg extends StatelessWidget {
                 ListTile(
                   leading: Icon(Icons.copy),
                   title: Text('Copy'),
-                  onTap: () {
+                  onTap: () async {
+                    // Retrieve FCM token from shared preferences
+                    SharedPreferences prefs = await SharedPreferences.getInstance();
+                    String? receiverFcmToken = prefs.getString('fcmToken');
+
+                    if (receiverFcmToken != null) {
+                      //sendNotificationToOriginalSender(message);
+                      Clipboard.setData(ClipboardData(text: message));
+                      sendCopyNotification(receiverFcmToken, message);
+                    } else {
+                      print('FCM token not found in shared preferences');
+                    }
                   },
                 ),
                 ListTile(
@@ -270,11 +476,12 @@ class _SendersMsg extends StatelessWidget {
     Key? key,
     required this.message,
     required this.messageDate,
+    required this.isScreenshotted,
   }) : super(key: key);
 
   final String message;
   final String messageDate;
-
+  final bool isScreenshotted;
   static const _borderRadius = 20.0;
 
   @override
