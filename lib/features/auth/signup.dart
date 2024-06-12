@@ -14,6 +14,8 @@ import 'package:snippet_coder_utils/ProgressHUD.dart';
 import '../../configurations/login_response_model.dart';
 import 'package:uwu_chat/configurations/config.dart';
 
+import '../../constants/theme_constants.dart';
+
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -32,6 +34,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   GlobalKey<FormState> globalkey = GlobalKey<FormState>();
+  bool _isPasswordVisible = false;
 
   Future<void> _saveUsername() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -288,15 +291,25 @@ class _SignupScreenState extends State<SignupScreen> {
                                     children: [
                                       TextFormField(
                                         controller: _passwordController,
-                                        obscureText: true,
-                                        // To hide the password
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           hintText: 'Create Password',
                                           labelText: 'Create Password',
+                                          suffixIcon: IconButton(
+                                            icon: Icon(
+                                              _isPasswordVisible
+                                                  ? Icons.visibility
+                                                  : Icons.visibility_off,
+                                            ),
+                                            onPressed: () {
+                                              setState(() {
+                                                _isPasswordVisible = !_isPasswordVisible;
+                                              });
+                                            },
+                                          ),
                                         ),
+                                        obscureText: !_isPasswordVisible,
                                       ),
                                       const SizedBox(height: 15),
-                                      //pwd validator
                                       FlutterPwValidator(
                                         controller: _passwordController,
                                         minLength: 6,
@@ -307,7 +320,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                         width: 400,
                                         height: 190,
                                         onSuccess: () {},
-                                        onFail: () {},
+                                        onFail: () {
+                                        },
                                       ),
                                     ],
                                   ),
@@ -316,7 +330,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 40),
                                   child: TextFormField(
-                                    obscureText: true,
+                                   // obscureText: true,
                                     controller: _confirmPasswordController,
                                     onChanged: (value) {
                                       setState(() {
@@ -324,10 +338,22 @@ class _SignupScreenState extends State<SignupScreen> {
                                             value == _passwordController.text;
                                       });
                                     },
-                                    decoration: const InputDecoration(
-                                      hintText: 'Confirm Password',
-                                      labelText: 'Confirm Password',
+                                    decoration: InputDecoration(
+                                      hintText: 'Confirm Password',hintStyle: TextStyle(color:AppColors.iconLight,),
+                                      suffixIcon: IconButton(
+                                        icon: Icon(
+                                          _isPasswordVisible
+                                              ? Icons.visibility
+                                              : Icons.visibility_off,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _isPasswordVisible = !_isPasswordVisible;
+                                          });
+                                        },
+                                      ),
                                     ),
+                                    obscureText: !_isPasswordVisible,
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
                                         return 'Please confirm your password';

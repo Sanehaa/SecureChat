@@ -1,6 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:uwu_chat/configurations/config.dart';
+import 'package:uwu_chat/features/forgot_password/reset_password.dart';
 
 class ForgotPassword extends StatefulWidget {
   const ForgotPassword({super.key});
@@ -13,6 +17,53 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   Color customColor1 = const Color(0xff0F2630);
   Color customColor3 = const Color(0xFF088395);
   final TextEditingController _emailController = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  Future<void> sendOtp() async {
+    final email = _emailController.text;
+    final url = Uri.parse('$forgotpwd');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      if (response.statusCode == 200) {
+        print('forgot pasword email sent successfully');
+        final data = jsonDecode(response.body);
+        if (data['status'] == true) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const ResetPassword(),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(data['message'] ?? 'Failed to send OTP'),
+              backgroundColor: Colors.blueGrey,
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send OTP'),
+            backgroundColor: Colors.blueGrey,
+          ),
+        );
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('An error occurred: $error'),
+          backgroundColor: Colors.blueGrey,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,28 +129,35 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          hintText: 'Email',
-                          labelText: 'Email',
+                      child: Form(
+                        key: _formKey,
+                        child: TextFormField(
+                          controller: _emailController,
+                          decoration: const InputDecoration(
+                            hintText: 'Email',
+                            labelText: 'Email',
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter an email';
+                            }
+                            RegExp regex =
+                            RegExp(r'^[a-zA-Z0-9._%+-]+@gmail\.com$');
+                            if (!regex.hasMatch(value)) {
+                              return 'Please enter a valid Gmail address';
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter an email';
-                          }
-                          RegExp regex =
-                              RegExp(r'^[a-zA-Z0-9._%+-]+@gmail\.com$');
-                          if (!regex.hasMatch(value)) {
-                            return 'Please enter a valid Gmail address';
-                          }
-                          return null;
-                        },
                       ),
                     ),
                     const SizedBox(height: 30),
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          sendOtp();
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                           backgroundColor: customColor3,
                           minimumSize: const Size(200, 48),
@@ -116,9 +174,6 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                         ),
                       ),
                     ),
-                    // const SizedBox(
-                    //   height: 16,
-                    // ),
                     TextButton(
                         onPressed: () {
                           Navigator.of(context).pop();

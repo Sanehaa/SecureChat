@@ -7,7 +7,7 @@
 
 namespace {
 
-/// Window attribute that enables dark mode window decorations.
+/// Window attribute that enables darkmode mode window decorations.
 ///
 /// Redefined in case the developer's machine has a Windows SDK older than
 /// version 10.0.22000.0.
@@ -20,7 +20,7 @@ constexpr const wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 
 /// Registry key for app theme preference.
 ///
-/// A value of 0 indicates apps should use dark mode. A non-zero or missing
+/// A value of 0 indicates apps should use darkmode mode. A non-zero or missing
 /// value indicates apps should use light mode.
 constexpr const wchar_t kGetPreferredBrightnessRegKey[] =
   L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";

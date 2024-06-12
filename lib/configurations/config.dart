@@ -1,4 +1,4 @@
-final url='http://192.168.0.107:3000/';
+final url='http://192.168.112.37:3000/';
 final registration = url + "registration";
 final login = url + "login";
 final glogin = url + "google-login";
@@ -10,5 +10,11 @@ final logout = url + "logout";
 final savefcm = url + "fcmToken";
 final getfcm = url + "getFCMToken";
 final screenshot = url + "sendScreenshotNotification";
-
+final imgurl = url + "image/";
+final forgotpwd = url + "forgotPassword";
+final resetpwd = url + "resetPassword";
+final callnoti = url + "callnotify";
+final delacc = url + "deleteacc";
+final sendmsg = url + "send-message";
+final receivemsg= url + "receivemsg/";
 //update the baseurl in userservice and notifications.dart and chat screen

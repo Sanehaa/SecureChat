@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uwu_chat/common_widgets/random_img_api.dart';
 import 'package:uwu_chat/features/friend_req/searchuser.dart';
+import 'package:uwu_chat/features/one_to_one_chat/contacts.dart';
 import 'package:uwu_chat/features/settings/settings.dart';
 import 'package:uwu_chat/constants/story_data.dart';
 import 'package:uwu_chat/constants/theme_constants.dart';
@@ -15,20 +16,39 @@ import '../../configurations/userservice.dart';
 import 'package:http/http.dart' as http;
 import 'package:uwu_chat/configurations/config.dart';
 
-class HomeScreen extends StatelessWidget {
-  HomeScreen({@required this.token, @required this.logout, super.key});
+class HomeScreen extends StatefulWidget {
+  HomeScreen({@required this.token, @required this.logout,super.key});
   final Function(BuildContext)? logout;
   final String? token;
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   final ValueNotifier<int> pageIndex = ValueNotifier(0);
 
   final ValueNotifier<String> title = ValueNotifier('Messages');
-
+  bool _isDarkMode = false;
   final screenTitles = const [
     'Messages',
     'Calls',
     'Contacts',
     'Notifications',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDarkModePreference();
+  }
+
+  void _loadDarkModePreference() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isDarkMode = prefs.getBool('isDarkMode') ?? false;
+    });
+  }
 
   Future<List<Map<String, dynamic>>?> fetchAcceptedFriendRequests() async {
     try {
@@ -43,7 +63,7 @@ class HomeScreen extends StatelessWidget {
   Future<void> _logout(BuildContext context) async {
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.0.107:3000/logout'),
+        Uri.parse('http://192.168.112.37:3000/logout'),
       );
 
       if (response.statusCode == 200) {
@@ -74,6 +94,7 @@ class HomeScreen extends StatelessWidget {
       print('Error logging out: $error');
     }
   }
+
   void _onNavigationIconSelected(index) {
     title.value = screenTitles[index];
     pageIndex.value = index;
@@ -92,10 +113,10 @@ class HomeScreen extends StatelessWidget {
             return Center(
               child: Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
-                  color: Colors.black,
+                  color: _isDarkMode ? Colors.white : Colors.black,
                 ),
               ),
             );
@@ -156,13 +177,6 @@ class HomeScreen extends StatelessWidget {
                           ),
                         );
                       },
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'newGroup',
-                    child: ListTile(
-                      leading: Icon(Icons.group),
-                      title: Text('New Group'),
                     ),
                   ),
                   const PopupMenuItem<String>(
@@ -315,6 +329,12 @@ class _BottomNavigationBarState extends State<_BottomNavigationBar> {
                   isSelected: (selectedIndex == 2),
                   onTap: () {
                     handleIconSelected(3);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Contacts(),
+                      ),
+                    );
                   }),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),

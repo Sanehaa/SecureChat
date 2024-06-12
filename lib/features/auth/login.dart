@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:uwu_chat/features/forgot_password/forgot_password.dart';
@@ -10,6 +11,9 @@ import 'package:uwu_chat/configurations/config.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
+
+import '../../constants/theme_constants.dart'; // Import jwt_decoder package
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,6 +30,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Color customColor1 = const Color(0xff0F2630);
   Color customColor2 = const Color(0xff0F2630);
   Color customColor3 = const Color(0xFF088395);
+  bool _isPasswordVisible = false;
+
   late SharedPreferences prefs;
 
   @override
@@ -64,14 +70,22 @@ class _LoginScreenState extends State<LoginScreen> {
           if (jsonResponse.containsKey('status')) {
             if (jsonResponse['status']) {
               var myToken = jsonResponse['token'];
-              var userId = jsonResponse['userId'];
-              print('User ID from login: $userId');
-              prefs.setString('token', myToken);
-              prefs.setString('userEmail', _emailController.text);
-              prefs.setString('userId', userId);
 
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => HomeScreen(token: myToken)));
+              // Decode the token to get userId
+              Map<String, dynamic> decodedToken = JwtDecoder.decode(myToken);
+              var userId = decodedToken['_id'];
+
+              if (userId != null) {
+                print('User ID from login: $userId');
+                prefs.setString('token', myToken);
+                prefs.setString('userEmail', _emailController.text);
+                prefs.setString('userId', userId);
+
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => HomeScreen(token: myToken, )));
+              } else {
+                throw Exception("User ID not found in token");
+              }
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -237,7 +251,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             return 'Please enter an email';
                           }
                           RegExp regex =
-                              RegExp(r'^[a-zA-Z0-9._%+-]+@gmail\.com$');
+                          RegExp(r'^[a-zA-Z0-9._%+-]+@gmail\.com$');
                           if (!regex.hasMatch(value)) {
                             return 'Please enter a valid Gmail address';
                           }
@@ -250,11 +264,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 40),
                       child: TextFormField(
                         controller: _passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          hintText: 'Password',
-                          labelText: 'Password',
+                        decoration: InputDecoration(
+                          hintText: 'Password',hintStyle: TextStyle(color:AppColors.iconLight,),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
                         ),
+                        obscureText: !_isPasswordVisible,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your password';
@@ -361,9 +386,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 'Sign Up',
                 style: GoogleFonts.poppins(
                     textStyle: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.white,
-                )),
+                      fontSize: 18,
+                      color: Colors.white,
+                    )),
               ),
             ),
           ),

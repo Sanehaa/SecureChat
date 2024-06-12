@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import '../auth/delete_account.dart';
 import '../one_to_one_chat/home.dart';
 import 'package:http_parser/http_parser.dart'as http_parser;
 import 'package:uwu_chat/configurations/config.dart';
@@ -17,24 +18,38 @@ class Profile extends StatefulWidget {
 class _ProfileState extends State<Profile> {
   late String _username = '';
   late XFile? _image = null;
-
+  late TextEditingController _usernameController = TextEditingController();
+  late TextEditingController _emailcontroller=TextEditingController();
+  Color customColor1 = const Color(0xff0F2630);
+  Color customColor2 = const Color(0xff0F2630);
+  Color customColor3 = const Color(0xFF088395);
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadDarkModePreference();
   }
+
+
 
   Future<void> _loadUserData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       _username = prefs.getString('username') ?? 'John Doe';
+      _usernameController.text = _username;
       String? imagePath = prefs.getString('profileImagePath');
       _image = imagePath != null ? XFile(imagePath) : null;
+      String? userEmail = prefs.getString('userEmail');
+      _emailcontroller.text = userEmail ?? '';
     });
   }
 
-
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImage() async {
     final ImagePicker _picker = ImagePicker();
@@ -60,6 +75,12 @@ class _ProfileState extends State<Profile> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString('profileImagePath', imagePath);
   }
+
+  Future<void> _saveUsernameToLocalStorage(String newUsername) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('username', newUsername);
+  }
+
 
   Future<bool> _showConfirmDialog() async {
     return await showDialog<bool>(
@@ -155,20 +176,29 @@ class _ProfileState extends State<Profile> {
     }
   }
 
+  bool _isDarkMode = false;
+
+  void _loadDarkModePreference() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isDarkMode = prefs.getBool('isDarkMode') ?? false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Profile',
-          style: TextStyle(color: Colors.black),
+          style: TextStyle(color: _isDarkMode ? Colors.white : Colors.black,),
         ),
         centerTitle: true,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          color: Colors.black,
+          icon: Icon(Icons.arrow_back_ios_rounded),
+          color: _isDarkMode ? Colors.white : Colors.black,
           onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -231,9 +261,137 @@ class _ProfileState extends State<Profile> {
                 ),
               ],
             ),
+            SizedBox(height: 50,),
+            Column(
+              children: [
+                TextFormField(
+                  controller: _usernameController,
+                  style: TextStyle(
+                    color: Colors.black,
+                  ),
+                onChanged: (value) {
+                  setState(() {
+                    _username = value;
+                  });
+                  _saveUsernameToLocalStorage(value);
+                },
+                  decoration: InputDecoration(
+                    fillColor: _isDarkMode ? Colors.white : Colors.black,
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                      borderSide: BorderSide(color: Colors.grey),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                      borderSide: BorderSide(color: Colors.grey),
+                    ),
+                    floatingLabelBehavior: FloatingLabelBehavior.auto,
+                  ),
+                ),
+
+                SizedBox(height: 30,),
+                TextFormField(
+                  enabled: false,
+                  controller: _emailcontroller,
+                  style: TextStyle(
+                    color: Colors.black,
+                  ),
+                  decoration: InputDecoration(
+                    fillColor:_isDarkMode ? Colors.white : Colors.black,
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                      borderSide: BorderSide(color: Colors.grey),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                      borderSide: BorderSide(color: Colors.grey),
+                    ),
+                  ),
+                ),
+              ],
+            )
           ],
         ),
       ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 48.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Username updated'),
+                    ),
+                  );                },
+                style: ButtonStyle(
+                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                      side: BorderSide(color: customColor3, width: 3),
+                    ),
+                  ),
+                  backgroundColor: MaterialStateProperty.all<Color>(Colors.white),
+                  minimumSize: MaterialStateProperty.all<Size>(Size(double.infinity, 50)),
+
+                ),
+                child: Text(
+                  'Save Changes',
+                  style: TextStyle(color: customColor3, fontWeight: FontWeight.w700, fontSize: 18),
+
+                ),
+              ),
+            ),
+
+            SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.only(left: 64, right: 64),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Divider(
+                  color: Colors.blueGrey,
+                  thickness: 1.5,
+                ),
+              ),
+            ),
+            SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal:48.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DeleteAccount(),
+                    ),
+                  );
+                },
+                style: ButtonStyle(
+                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                      side: BorderSide(color: Colors.blueGrey, width: 3),
+                    ),
+                  ),
+                  backgroundColor: MaterialStateProperty.all<Color>(Colors.white),
+                  minimumSize: MaterialStateProperty.all<Size>(Size(double.infinity, 50)),
+                ),
+                child: Text(
+                  'Delete Account',
+                  style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w700, fontSize: 18),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+
     );
   }
 }
